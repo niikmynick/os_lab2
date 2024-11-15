@@ -10,17 +10,16 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Set up CMake
-        run: sudo apt-get install cmake
-
-      - name: Set up build environment
-        run: sudo apt-get install build-essential
+        run: |
+          brew update
+          brew install cmake
 
       - name: Configure and build
         run: |
