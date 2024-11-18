@@ -47,13 +47,15 @@ int lfu_cache_evict(file_cache *cache) {
 
 
 int create_cache_block(file_cache *cache, const void *buf, ssize_t count, off_t offset) {
+    size_t actual_count = (size_t) count > cache->block_size ? cache->block_size : (size_t) count;
+
     void *block_data = malloc(cache->block_size);
     if (!block_data) {
         perror("[!] Allocate memory for cache block");
         return -1;
     }
 
-    memcpy(block_data, buf, count);
+    memcpy(block_data, buf, actual_count);
 
     cache_block *new_block = malloc(sizeof(cache_block));
     if (!new_block) {
@@ -64,7 +66,7 @@ int create_cache_block(file_cache *cache, const void *buf, ssize_t count, off_t 
 
     new_block->offset = offset;
     new_block->data = block_data;
-    new_block->block_size = count;
+    new_block->block_size = actual_count;
     new_block->usage_frequency = 1;
     new_block->is_dirty = false;
     new_block->next_block = cache->head;
