@@ -1,12 +1,11 @@
 //
-// Created by Никита Кобик on 15.11.2024.
+// Created by Никита Кобик on 23.11.2024.
 //
 
-#include "api.h"
+#include "lru.h"
 
 
-
-file_cache* lab2_open(const char *path, const size_t block_size, const size_t max_blocks) {
+file_cache* open_file(const char *path, const size_t block_size, const size_t max_blocks) {
     const int fd = open(path, O_RDWR);
 
     if (fd < 0) {
@@ -38,7 +37,7 @@ file_cache* lab2_open(const char *path, const size_t block_size, const size_t ma
 }
 
 
-int lab2_close(file_cache *cache) {
+int close_file(file_cache *cache) {
     if (!cache) {
         perror("[!] Get cache");
         return -1;
@@ -69,7 +68,7 @@ int lab2_close(file_cache *cache) {
 }
 
 
-int lab2_fsync(file_cache *cache) {
+int fsync_file(file_cache *cache) {
     if (!cache) {
         perror("[!] Get cache");
         return -1;
@@ -96,7 +95,7 @@ int lab2_fsync(file_cache *cache) {
 }
 
 
-ssize_t lab2_write(file_cache *cache, const void *buf, ssize_t count, off_t offset) {
+ssize_t write_file(file_cache *cache, const void *buf, ssize_t count, off_t offset) {
     if (!cache) {
         perror("[!] Get cache");
         return -1;
@@ -109,7 +108,7 @@ ssize_t lab2_write(file_cache *cache, const void *buf, ssize_t count, off_t offs
             memcpy(current->data, buf, count);
 
             current->is_dirty = true;
-            current->usage.frequency++;
+            current->usage.prev_time = time(0);
             return count;
         }
 
@@ -128,7 +127,7 @@ ssize_t lab2_write(file_cache *cache, const void *buf, ssize_t count, off_t offs
 }
 
 
-ssize_t lab2_read(file_cache *cache, void *buf, ssize_t count, off_t offset) {
+ssize_t read_file(file_cache *cache, void *buf, ssize_t count, off_t offset) {
     if (!cache) {
         perror("[!] Get cache");
         return -1;
@@ -138,7 +137,7 @@ ssize_t lab2_read(file_cache *cache, void *buf, ssize_t count, off_t offset) {
     while (current) {
         if (current->offset == offset) {
             memcpy(buf, current->data, count);
-            current->usage.frequency++;
+            current->usage.prev_time = time(0);
             return count;
         }
         current = current->next_block;
@@ -172,7 +171,7 @@ ssize_t lab2_read(file_cache *cache, void *buf, ssize_t count, off_t offset) {
 }
 
 
-off_t lab2_lseek(file_cache *cache, const off_t offset, const int whence) {
+off_t lseek_file(file_cache *cache, const off_t offset, const int whence) {
     if (!cache) {
         perror("[!] Get cache");
         return -1;

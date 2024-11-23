@@ -11,16 +11,23 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <time.h>
 
 typedef struct cache_block cache_block;
 typedef struct file_cache file_cache;
+typedef union cache_block_usage cache_block_usage;
 
+union cache_block_usage {
+    int frequency;
+    time_t prev_time;
+};
 
 struct cache_block {
     off_t offset;
     void *data;
     size_t block_size;
-    int usage_frequency;
+    cache_block_usage usage;
+    // int usage_frequency;
     bool is_dirty;
     cache_block *next_block;
 };
@@ -35,6 +42,9 @@ struct file_cache {
 };
 
 int lfu_cache_evict(file_cache *cache);
-int create_cache_block(file_cache *cache, const void *buf, ssize_t count, off_t offset);
+int lru_cache_evict(file_cache *cache);
+int create_lfu_cache_block(file_cache *cache, const void *buf, ssize_t count, off_t offset);
+int create_lru_cache_block(file_cache *cache, const void *buf, ssize_t count, off_t offset);
+int compare_times(time_t time1, time_t time2);
 
 #endif //UTILS_H

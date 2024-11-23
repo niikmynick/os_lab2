@@ -2,6 +2,7 @@
 
 #include "utils.h"
 #include "api.h"
+#include "lru.h"
 
 #define BLOCK_SIZE 4096
 #define MAX_BLOCKS 4
@@ -109,7 +110,7 @@ int bin_search(const char *filename, int target) {
     return 0;
 }
 
-int bin_search_cache_impl(const char *filename, int target) {
+int bin_search_lfu_cache_impl(const char *filename, int target) {
     file_cache *cache = lab2_open(filename, BLOCK_SIZE, MAX_BLOCKS);
     if (!cache) {
         perror("[!] Open file for reading");
@@ -157,20 +158,73 @@ int bin_search_cache_impl(const char *filename, int target) {
     return 0;
 }
 
+int bin_search_lru_cache_impl(const char *filename, int target) {
+    file_cache *cache = open_file(filename, BLOCK_SIZE, MAX_BLOCKS);
+    if (!cache) {
+        perror("[!] Open file for reading");
+        return -1;
+    }
+
+    int left = 0, right = -1;
+
+    off_t file_size = lseek(cache->fd, 0, SEEK_END);
+    if (file_size < 0) {
+        perror("[!] Get file size");
+        close_file(cache);
+        return -1;
+    }
+    right = file_size / sizeof(int) - 1;
+
+    int found = 0;
+    while (left <= right) {
+        int mid = left + (right - left) / 2;
+        int value;
+
+        ssize_t bytes_read = read_file(cache, &value, sizeof(int), mid * sizeof(int));
+
+        if (bytes_read < sizeof(int)) {
+            perror("[!] Read value from cache");
+            break;
+        }
+
+        if (value == target) {
+            printf("Found %d at position %d.\n", target, mid);
+            found = 1;
+            break;
+        } else if (value < target) {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+
+    if (!found) {
+        printf("Element %d not found in file.\n", target);
+    }
+
+    close_file(cache);
+    return 0;
+}
+
 
 int main() {
     // bin_search("../sorted.txt", 52);
     // bin_search_cache_impl("../sorted.txt", 52);
 
-    clock_t start = clock();
+    clock_t start_time = clock();
     bin_search("../data.txt", 52);
-    clock_t end = clock();
-    printf("bin_search: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
+    clock_t end_time = clock();
+    printf("bin search: %f\n", (double)(end_time - start_time) / CLOCKS_PER_SEC);
 
-    clock_t start_cache = clock();
-    bin_search_cache_impl("../data.txt", 52);
-    clock_t end_cache = clock();
-    printf("bin_search_cache_impl: %f\n", (double)(end_cache - start_cache) / CLOCKS_PER_SEC);
+    start_time = clock();
+    bin_search_lfu_cache_impl("../data.txt", 52);
+    end_time = clock();
+    printf("bin search with LFU cache: %f\n", (double)(end_time - start_time) / CLOCKS_PER_SEC);
+
+    start_time = clock();
+    bin_search_lru_cache_impl("../data.txt", 52);
+    end_time = clock();
+    printf("bin search with LRU cache: %f\n", (double)(end_time - start_time) / CLOCKS_PER_SEC);
 
     return 0;
 }
