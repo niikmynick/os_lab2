@@ -74,5 +74,7 @@ int create_cache_block(file_cache *cache, const void *buf, ssize_t count, off_t 
     cache->head = new_block;
     cache->current_blocks++;
 
+    free(block_data);
+
     return 0;
 }
